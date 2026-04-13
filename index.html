@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#0a0a0a"/>
+  <meta name="description" content="HERCULES — Track, Lift, Dominate"/>
+  <title>HERCULES</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { margin: 0; background: #07070e; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-presets="react">
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const C = {
+  bg:"#0a0a0a",surface:"#111111",surface2:"#1a1a1a",surface3:"#232323",
+  border:"#2a2a2a",accent:"#e8ff00",accent2:"#ff4d00",text:"#f0f0f0",
+  muted:"#666",danger:"#ff3333",success:"#00e676",
+};
+
+const MUSCLE_GROUPS = ["Chest","Biceps","Triceps","Quads","Hamstrings","Glutes","Back","Shoulders","Abs","Calves"];
+const MUSCLE_META = {
+  Chest:{emoji:"🏋️",color:"#e8ff00"},Biceps:{emoji:"💪",color:"#00c8ff"},
+  Triceps:{emoji:"🔥",color:"#ff6b35"},Quads:{emoji:"🦵",color:"#a855f7"},
+  Hamstrings:{emoji:"🦵",color:"#ec4899"},Glutes:{emoji:"🍑",color:"#f97316"},
+  Back:{emoji:"🦍",color:"#22c55e"},Shoulders:{emoji:"🏔",color:"#06b6d4"},
+  Abs:{emoji:"🧱",color:"#eab308"},Calves:{emoji:"🐄",color:"#84cc16"},
+};
+const EXERCISES = {
+  Chest:["Barbell Bench Press","Incline Barbell Press","Decline Bench Press","Dumbbell Bench Press","Incline Dumbbell Press","Chest Fly (DB)","Cable Fly","Pec Deck","Push-ups","Weighted Push-ups","Dips (Chest Lean)","Machine Chest Press","Smith Machine Press","Svend Press","Landmine Press"],
+  Biceps:["Barbell Curl","EZ Bar Curl","Dumbbell Curl","Hammer Curl","Incline DB Curl","Concentration Curl","Preacher Curl","Cable Curl","Spider Curl","Zottman Curl","Reverse Curl","Cross-body Hammer Curl","Machine Curl","Drag Curl","Chin-ups"],
+  Triceps:["Tricep Pushdown","Overhead Tricep Extension","Skull Crushers","Close-Grip Bench Press","Dips (Upright)","Cable Overhead Extension","Kickbacks","Diamond Push-ups","JM Press","Rope Pushdown","Reverse Grip Pushdown","Machine Dips","Floor Press (Close Grip)","Tate Press","Bench Dips"],
+  Quads:["Back Squat","Front Squat","Leg Press","Hack Squat","Bulgarian Split Squat","Walking Lunges","Leg Extensions","Step-ups","Sissy Squats","Smith Machine Squat","Goblet Squat","Cyclist Squat","Wall Sit","Box Squat","Zercher Squat"],
+  Hamstrings:["Romanian Deadlift","Lying Leg Curl","Seated Leg Curl","Nordic Curl","Good Mornings","Hip Thrust","Glute Bridge","Single-Leg RDL","Kettlebell Swings","Cable Pull-through","Stiff-Leg Deadlift","Reverse Lunges","Stability Ball Curl","Slider Ham Curl","Sumo Deadlift"],
+  Glutes:["Hip Thrust","Barbell Glute Bridge","Bulgarian Split Squat","Cable Kickbacks","Step-ups","Sumo Squats","Reverse Lunges","Frog Pumps","Curtsy Lunges","Single-Leg Hip Thrust","Kettlebell Swings","Cable Abductions","Clamshells","Deadlifts","Smith Machine Squat"],
+  Back:["Pull-ups","Lat Pulldown","Barbell Row","Dumbbell Row","Seated Cable Row","T-Bar Row","Chest Supported Row","Landmine Row","Inverted Rows","Single Arm Pulldown","Straight Arm Pulldown","Machine Row","Meadows Row","Rack Pulls","Close Grip Pulldown"],
+  Shoulders:["Overhead Press","Dumbbell Shoulder Press","Arnold Press","Lateral Raises","Front Raises","Rear Delt Fly","Face Pulls","Upright Row","Cable Lateral Raise","Machine Shoulder Press","Landmine Press","Cuban Press","Reverse Pec Deck","Plate Raises","Push Press"],
+  Abs:["Crunches","Cable Crunch","Hanging Leg Raises","Plank","Side Plank","Ab Rollouts","Russian Twists","Mountain Climbers","Reverse Crunch","Bicycle Crunch","V-Ups","Toe Touches","Captain's Chair Raise","Decline Sit-ups","Flutter Kicks"],
+  Calves:["Standing Calf Raises","Seated Calf Raises","Donkey Calf Raises","Smith Machine Calf Raise","Single Leg Calf Raise","Leg Press Calf Raise","Jump Rope","Box Jumps","Farmer Walk on Toes","Stair Raises","Tibialis Raises","Sled Push","Sprinting","Hopping Drills","Calf Press Machine"],
+};
+const REST_DURATION = 90;
+const genId = () => Math.random().toString(36).slice(2,10);
+const formatTime = s => {
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  return h>0?`${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`:`${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+};
+const store = {
+  get:k=>{try{return JSON.parse(localStorage.getItem("hrc_"+k))||null}catch{return null}},
+  set:(k,v)=>{try{localStorage.setItem("hrc_"+k,JSON.stringify(v))}catch{}},
+};
+
+// ─── STYLES ───────────────────────────────────────────────────────────────────
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;600;700&family=Barlow:wght@300;400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#08080f;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Barlow',sans-serif}
+.phone{width:393px;height:852px;background:${C.bg};border-radius:50px;overflow:hidden;position:relative;display:flex;flex-direction:column;box-shadow:0 0 0 1px #252525,0 0 0 10px #0e0e0e,0 60px 120px rgba(0,0,0,.95),inset 0 0 0 1px rgba(255,255,255,.04)}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:118px;height:34px;background:#000;border-radius:0 0 22px 22px;z-index:999;display:flex;align-items:center;justify-content:center;gap:7px}
+.n-cam{width:10px;height:10px;border-radius:50%;background:#1c1c1c;border:1px solid #2a2a2a}
+.n-spk{width:48px;height:5px;border-radius:3px;background:#1c1c1c}
+.screen{flex:1;display:flex;flex-direction:column;overflow:hidden;margin-top:44px}
+.scr{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.bebas{font-family:'Bebas Neue',sans-serif}
+.bc{font-family:'Barlow Condensed',sans-serif}
+.tabbar{display:flex;background:${C.surface};border-top:1px solid ${C.border};flex-shrink:0;padding:8px 0 20px}
+.tabBtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;color:${C.muted};transition:color .15s;padding:6px 4px}
+.tabBtn.on{color:${C.accent}}
+.tabIcon{font-size:21px;line-height:1}
+.tabLbl{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.card{background:${C.surface};border:1px solid ${C.border};padding:15px;margin-bottom:11px}
+.inp{background:${C.surface2};border:1px solid ${C.border};color:${C.text};padding:11px 14px;font-family:'Barlow',sans-serif;font-size:15px;width:100%;outline:none;transition:border-color .15s}
+.inp:focus{border-color:${C.accent}}
+.inp::placeholder{color:${C.muted}}
+.inp option{background:${C.surface2}}
+.btn{padding:13px 20px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:2px;border:none;cursor:pointer;width:100%;text-align:center;transition:all .15s}
+.btn-p{background:${C.accent};color:#000}.btn-p:hover{background:#d4e800}
+.btn-s{background:${C.surface2};color:${C.text};border:1px solid ${C.border}}
+.btn-d{background:transparent;color:${C.danger};border:1px solid ${C.danger}}
+.btn-sm{padding:8px 14px;font-size:11px;width:auto;letter-spacing:1px}
+.iBtn{background:none;border:none;cursor:pointer;color:${C.muted};padding:5px;font-size:18px;line-height:1;transition:color .15s}
+.iBtn:hover{color:${C.text}}
+.tag{display:inline-block;padding:3px 8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;background:${C.surface2};border:1px solid ${C.border};color:${C.muted};margin:2px}
+.chip{padding:5px 11px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;background:transparent;border:1px solid ${C.border};color:${C.muted};cursor:pointer;transition:all .15s;margin:3px;display:inline-block}
+.chip:hover,.chip.on{background:${C.accent};color:#000;border-color:${C.accent}}
+.lbl{font-family:'Barlow Condensed',sans-serif;font-weight:600;text-transform:uppercase;font-size:10px;color:${C.muted};letter-spacing:2px}
+.div{height:1px;background:${C.border};margin:12px 0}
+.stepper{display:flex;align-items:center;background:${C.bg};border:1px solid ${C.border}}
+.sBtn{background:none;border:none;color:${C.muted};font-size:20px;padding:4px 11px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;line-height:1;user-select:none}
+.sBtn:hover{color:${C.text}}
+.sVal{background:none;border:none;color:${C.text};text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;width:48px;padding:7px 0;outline:none}
+.wtimer{font-family:'Bebas Neue',sans-serif;font-size:21px;letter-spacing:2px;color:${C.accent};background:rgba(232,255,0,.07);border:1px solid rgba(232,255,0,.22);padding:4px 11px}
+.rest{background:${C.surface2};border-bottom:2px solid ${C.accent2};padding:9px 14px;display:flex;align-items:center;gap:11px;flex-shrink:0}
+.rest-cnt{font-family:'Bebas Neue',sans-serif;font-size:30px;color:${C.accent2};min-width:66px;line-height:1}
+.rest-trk{flex:1;height:4px;background:${C.border}}
+.rest-fill{height:4px;background:${C.accent2};transition:width 1s linear}
+.rest-skip{background:none;border:1px solid ${C.border};color:${C.muted};font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+.aex{background:${C.surface};border:1px solid ${C.border};margin-bottom:9px;overflow:hidden}
+.aex.done{border-color:${C.success};opacity:.6}
+.aex-hdr{background:${C.surface2};padding:11px 13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.aex-name{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:.5px;color:${C.text}}
+.circle{width:30px;height:30px;border-radius:50%;border:2px solid ${C.border};display:flex;align-items:center;justify-content:center;cursor:pointer;background:none;transition:all .15s;flex-shrink:0}
+.circle.done{background:${C.success};border-color:${C.success}}
+.pgbar{height:3px;background:${C.border};flex-shrink:0}
+.pgfill{height:3px;background:${C.accent};transition:width .3s}
+.browser{position:absolute;inset:0;background:${C.bg};z-index:50;display:flex;flex-direction:column;overflow:hidden}
+.mtabs{display:flex;overflow-x:auto;gap:5px;padding:9px 13px;border-bottom:1px solid ${C.border};flex-shrink:0;scrollbar-width:none}
+.mtabs::-webkit-scrollbar{display:none}
+.mtab{flex-shrink:0;padding:5px 11px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border:1px solid ${C.border};background:none;color:${C.muted};cursor:pointer;white-space:nowrap;transition:all .15s}
+.mtab.on{background:${C.accent};color:#000;border-color:${C.accent}}
+.exrow{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;border-bottom:1px solid ${C.border};cursor:pointer}
+.exrow:hover{background:rgba(255,255,255,.02)}
+.exadd{width:27px;height:27px;border-radius:50%;background:none;border:1.5px solid ${C.border};color:${C.muted};cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;flex-shrink:0;transition:all .15s}
+.exadd:hover{border-color:${C.accent};color:${C.accent}}
+.exadd.on{background:${C.success};border-color:${C.success};color:#000;font-weight:700;font-size:12px}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;z-index:60}
+.modal{background:${C.surface};border-top:2px solid ${C.accent};width:100%;padding:18px 15px 26px;max-height:85%;overflow-y:auto}
+.stat-card{background:${C.surface2};border:1px solid ${C.border};padding:13px;text-align:center}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:30px;color:${C.accent};letter-spacing:1px;line-height:1}
+.stat-sub{font-family:'Barlow Condensed',sans-serif;font-size:10px;color:${C.muted};text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.bmi-bar{height:8px;position:relative;background:linear-gradient(to right,#3b82f6 0%,#22c55e 30%,#e8ff00 55%,#f97316 75%,#ef4444 100%);margin:8px 0}
+.bmi-needle{position:absolute;top:-4px;width:3px;height:16px;background:#fff;transform:translateX(-50%);border-radius:1px}
+.avatar{width:76px;height:76px;border-radius:50%;border:2px solid ${C.accent};overflow:hidden;display:flex;align-items:center;justify-content:center;background:${C.surface2};cursor:pointer;position:relative;flex-shrink:0}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar-ov{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;border-radius:50%}
+.avatar:hover .avatar-ov{opacity:1}
+.sess-card{background:${C.surface};border:1px solid ${C.border};padding:13px;margin-bottom:9px}
+@keyframes up{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.in{animation:up .2s ease forwards}
+.urg{animation:pulse .5s infinite}
+`;
+
+// ─── SHARED ───────────────────────────────────────────────────────────────────
+function useElapsed(active){
+  const [e,setE]=useState(0);const ref=useRef();
+  useEffect(()=>{if(!active){setE(0);clearInterval(ref.current);return;}const t=Date.now();ref.current=setInterval(()=>setE(Math.floor((Date.now()-t)/1000)),500);return()=>clearInterval(ref.current);},[active]);
+  return e;
+}
+
+function Stepper({value,onChange,step=1,min=0}){
+  return <div className="stepper">
+    <button className="sBtn" onClick={()=>onChange(Math.max(min,+(value-step).toFixed(2)))}>−</button>
+    <input className="sVal" type="number" value={value} min={min} onChange={e=>onChange(Number(e.target.value)||min)}/>
+    <button className="sBtn" onClick={()=>onChange(+(value+step).toFixed(2))}>+</button>
+  </div>;
+}
+
+function RestTimer({rk,onSkip}){
+  const [rem,setRem]=useState(REST_DURATION);
+  useEffect(()=>{setRem(REST_DURATION);const id=setInterval(()=>setRem(r=>Math.max(0,r-1)),1000);return()=>clearInterval(id);},[rk]);
+  const done=rem===0,urg=rem<=5&&!done;
+  return <div className="rest">
+    <div style={{minWidth:70}}>
+      <div className="lbl" style={{fontSize:9}}>REST TIMER</div>
+      <div className={`rest-cnt${urg?" urg":""}`} style={done?{color:C.success}:{}}>{done?"GO!":formatTime(rem)}</div>
+    </div>
+    <div className="rest-trk"><div className="rest-fill" style={{width:`${(rem/REST_DURATION)*100}%`}}/></div>
+    <button className="rest-skip" onClick={onSkip}>{done?"DISMISS":"SKIP"}</button>
+  </div>;
+}
+
+function Hdr({title,left,right,accent}){
+  return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 15px",borderBottom:`1px solid ${C.border}`,flexShrink:0,background:C.bg}}>
+    {left||<div style={{width:34}}/>}
+    <span className="bebas" style={{fontSize:21,color:accent?C.accent:C.text,letterSpacing:1}}>{title}</span>
+    {right||<div style={{width:34}}/>}
+  </div>;
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+function LoginScreen({onLogin}){
+  const [mode,setMode]=useState("login");
+  const [f,setF]=useState({name:"",email:"",password:"",age:"",weight:"",height:"",gender:"male",goal:"Build Muscle"});
+  const [err,setErr]=useState("");
+  const up=(k,v)=>setF(p=>({...p,[k]:v}));
+  const goals=["Build Muscle","Lose Fat","Strength","Endurance"];
+
+  const submit=()=>{
+    const users=store.get("users")||{};
+    if(mode==="signup"){
+      if(!f.name||!f.email||!f.password){setErr("Fill in name, email & password.");return;}
+      if(users[f.email]){setErr("Account already exists.");return;}
+      const u={name:f.name,email:f.email,age:f.age,weight:f.weight,height:f.height,gender:f.gender,goal:f.goal};
+      users[f.email]={...u,password:f.password};store.set("users",users);onLogin(u);
+    }else{
+      if(!f.email||!f.password){setErr("Enter email & password.");return;}
+      const u=users[f.email];
+      if(!u||u.password!==f.password){setErr("Invalid credentials.");return;}
+      onLogin({name:u.name,email:u.email,age:u.age,weight:u.weight,height:u.height,gender:u.gender,goal:u.goal});
+    }
+  };
+
+  return <div className="scroll" style={{padding:"26px 20px 40px",background:`linear-gradient(155deg,${C.bg} 55%,#1c1800 100%)`}}>
+    <div className="bebas" style={{fontSize:82,lineHeight:.88,color:C.accent}}>HERCU{"\n"}LES</div>
+    <div className="bc" style={{fontSize:13,color:C.muted,textTransform:"uppercase",letterSpacing:4,margin:"10px 0 44px"}}>TRACK · LIFT · DOMINATE</div>
+    <div className="in" style={{display:"flex",flexDirection:"column",gap:10}}>
+      {mode==="signup"&&<>
+        <input className="inp" placeholder="Full Name" value={f.name} onChange={e=>up("name",e.target.value)}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <input className="inp" placeholder="Age" type="number" value={f.age} onChange={e=>up("age",e.target.value)}/>
+          <input className="inp" placeholder="Weight (kg)" type="number" value={f.weight} onChange={e=>up("weight",e.target.value)}/>
+          <input className="inp" placeholder="Height (cm)" type="number" value={f.height} onChange={e=>up("height",e.target.value)}/>
+          <select className="inp" value={f.gender} onChange={e=>up("gender",e.target.value)}>
+            <option value="male">Male</option><option value="female">Female</option>
+          </select>
+        </div>
+        <div className="lbl" style={{marginBottom:2}}>GOAL</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+          {goals.map(g=><button key={g} className={`chip${f.goal===g?" on":""}`} onClick={()=>up("goal",g)}>{g}</button>)}
+        </div>
+      </>}
+      <input className="inp" placeholder="Email" type="email" value={f.email} onChange={e=>up("email",e.target.value)}/>
+      <input className="inp" placeholder="Password" type="password" value={f.password} onChange={e=>up("password",e.target.value)}/>
+      {err&&<div className="bc" style={{color:C.danger,fontSize:13}}>{err}</div>}
+      <button className="btn btn-p" style={{marginTop:6}} onClick={submit}>{mode==="login"?"ENTER THE GYM":"CREATE ACCOUNT"}</button>
+      <button className="btn btn-s" onClick={()=>{setMode(m=>m==="login"?"signup":"login");setErr("");}}>
+        {mode==="login"?"New here? Sign Up →":"Have an account? Log In →"}
+      </button>
+    </div>
+  </div>;
+}
+
+// ─── HOME (History) ───────────────────────────────────────────────────────────
+function HomeScreen({history,avatar,userName}){
+  const totalSets=history.reduce((s,h)=>s+h.exercises.reduce((a,e)=>a+e.sets.length,0),0);
+  const totalVol=history.reduce((s,h)=>s+h.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>b+st.reps*st.weight,0),0),0);
+
+  return <div className="scr">
+    {/* Header with avatar */}
+    <div style={{padding:"14px 15px 12px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+        <div style={{width:44,height:44,borderRadius:"50%",border:`2px solid ${C.accent}`,overflow:"hidden",flexShrink:0,background:C.surface2,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {avatar?<img src={avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+            :<span className="bebas" style={{fontSize:20,color:C.accent}}>{(userName||"H")[0].toUpperCase()}</span>}
+        </div>
+        <div>
+          <div className="bebas" style={{fontSize:24,color:C.accent,letterSpacing:1,lineHeight:1}}>HERCULES</div>
+          <div className="bc" style={{fontSize:11,color:C.muted,letterSpacing:1.5}}>WORKOUT LOG</div>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:7}}>
+        {[["SESSIONS",history.length,""],["SETS",totalSets,""],["VOLUME",totalVol>9999?`${(totalVol/1000).toFixed(1)}k`:totalVol,"kg"]].map(([l,v,u])=>
+          <div key={l} style={{background:C.surface2,border:`1px solid ${C.border}`,padding:"10px 7px",textAlign:"center"}}>
+            <div className="bebas" style={{fontSize:22,color:C.accent,lineHeight:1}}>{v}{u&&<span style={{fontSize:13}}> {u}</span>}</div>
+            <div className="bc" style={{fontSize:9,color:C.muted,letterSpacing:1.5,marginTop:2}}>{l}</div>
+          </div>
+        )}
+      </div>
+    </div>
+    <div className="scroll" style={{padding:"13px 13px 20px"}}>
+      {history.length===0?<div style={{textAlign:"center",paddingTop:55}}>
+        <div style={{fontSize:46,marginBottom:14}}>📊</div>
+        <div className="bebas" style={{fontSize:20,color:C.muted,marginBottom:7}}>NO WORKOUTS YET</div>
+        <div className="bc" style={{color:C.muted,fontSize:14}}>Finish your first session to see your history here</div>
+      </div>:history.map((s,i)=>{
+        const sets=s.exercises.reduce((a,e)=>a+e.sets.length,0);
+        const vol=s.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>b+st.reps*st.weight,0),0);
+        return <div key={s.id} className="sess-card in" style={{animationDelay:`${i*.04}s`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:9}}>
+            <div>
+              <div className="bebas" style={{fontSize:19,color:C.text,letterSpacing:.5}}>{s.planName}</div>
+              <div className="bc" style={{fontSize:11,color:C.muted,marginTop:2}}>
+                {new Date(s.date).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})} · {new Date(s.date).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"})}
+              </div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div className="bc" style={{fontWeight:700,fontSize:14,color:C.accent}}>{sets} SETS</div>
+              {s.duration>0&&<div className="bc" style={{fontSize:11,color:C.muted}}>⏱ {formatTime(s.duration)}</div>}
+              {vol>0&&<div className="bc" style={{fontSize:11,color:C.muted}}>{vol.toLocaleString()} kg</div>}
+            </div>
+          </div>
+          {s.exercises.map((ex,j)=><div key={j} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderTop:`1px solid ${C.border}`}}>
+            <span className="bc" style={{fontWeight:600,fontSize:13,color:C.text}}>{ex.name}</span>
+            <span style={{fontSize:11,color:C.muted,fontFamily:"'Barlow',sans-serif"}}>{ex.sets.map(st=>`${st.reps}×${st.weight}kg`).join("  ")}</span>
+          </div>)}
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+// ─── EXERCISE BROWSER ─────────────────────────────────────────────────────────
+function ExBrowser({exercises,onToggle,onClose}){
+  const [search,setSrch]=useState(""),[tab,setTab]=useState("All");
+  const all=useMemo(()=>MUSCLE_GROUPS.flatMap(m=>EXERCISES[m].map(n=>({name:n,muscle:m}))),[]);
+  const isAdded=(n,m)=>exercises.some(e=>e.name===n&&e.muscle===m);
+  const cnt=m=>exercises.filter(e=>e.muscle===m).length;
+  const filt=useMemo(()=>all.filter(ex=>(tab==="All"||ex.muscle===tab)&&(!search||ex.name.toLowerCase().includes(search.toLowerCase()))),[all,tab,search]);
+  const grouped=tab==="All"&&!search?MUSCLE_GROUPS.reduce((a,m)=>{a[m]=filt.filter(e=>e.muscle===m);return a},{}):null;
+  return <div className="browser in">
+    <div style={{padding:"11px 13px 9px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:9}}>
+        <button className="iBtn" onClick={onClose} style={{fontSize:19}}>←</button>
+        <span className="bebas" style={{fontSize:21,color:C.text,flex:1,letterSpacing:1}}>ADD EXERCISES</span>
+        <span style={{background:C.accent,color:"#000",fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:12,padding:"4px 9px"}}>{exercises.length} ADDED</span>
+      </div>
+      <input className="inp" placeholder="Search 150 exercises..." value={search} onChange={e=>setSrch(e.target.value)}/>
+    </div>
+    <div className="mtabs">
+      {["All",...MUSCLE_GROUPS].map(t=>{const c=t==="All"?exercises.length:cnt(t);return(
+        <button key={t} className={`mtab${tab===t?" on":""}`} onClick={()=>{setTab(t);setSrch("");}}>
+          {t!=="All"?MUSCLE_META[t]?.emoji+" ":""}{t}{c>0?` (${c})`:""}</button>
+      );})}
+    </div>
+    <div className="scroll">
+      {grouped?MUSCLE_GROUPS.map(m=>!grouped[m]?.length?null:<div key={m}>
+        <div className="bebas" style={{fontSize:19,color:C.text,padding:"11px 15px 5px",borderBottom:`1px solid ${C.border}`}}>
+          {MUSCLE_META[m]?.emoji} {m} <span style={{fontSize:12,color:C.muted,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:400}}>{cnt(m)}/5</span>
+        </div>
+        {grouped[m].map(ex=><ExRow key={ex.name} ex={ex} added={isAdded(ex.name,ex.muscle)} blocked={!isAdded(ex.name,ex.muscle)&&cnt(ex.muscle)>=5} onToggle={onToggle} showMuscle={false}/>)}
+      </div>):filt.map(ex=><ExRow key={ex.name+ex.muscle} ex={ex} added={isAdded(ex.name,ex.muscle)} blocked={!isAdded(ex.name,ex.muscle)&&cnt(ex.muscle)>=5} onToggle={onToggle} showMuscle={tab==="All"||!!search}/>)}
+      {!filt.length&&<div style={{textAlign:"center",padding:"36px 20px",color:C.muted,fontFamily:"'Barlow Condensed',sans-serif",fontSize:15}}>No exercises found.</div>}
+      <div style={{height:76}}/>
+    </div>
+    <div style={{padding:"11px 13px 16px",background:C.surface,borderTop:`1px solid ${C.border}`,flexShrink:0}}>
+      <button className="btn btn-p" onClick={onClose}>DONE · {exercises.length} EXERCISE{exercises.length!==1?"S":""} ADDED</button>
+    </div>
+  </div>;
+}
+function ExRow({ex,added,blocked,onToggle,showMuscle}){
+  return <div className="exrow" style={blocked?{opacity:.3}:{}} onClick={()=>!blocked&&onToggle(ex)}>
+    <div style={{flex:1}}>
+      <div className="bc" style={{fontWeight:700,fontSize:14,color:C.text}}>{ex.name}</div>
+      {showMuscle&&<div style={{fontSize:11,color:C.muted,marginTop:1}}>{MUSCLE_META[ex.muscle]?.emoji} {ex.muscle}</div>}
+      {blocked&&<div style={{fontSize:11,color:C.accent2,marginTop:1}}>Max 5 per group</div>}
+    </div>
+    <button className={`exadd${added?" on":""}`} onClick={e=>{e.stopPropagation();!blocked&&onToggle(ex);}}>{added?"✓":"+"}</button>
+  </div>;
+}
+
+// ─── PLAN EDITOR ──────────────────────────────────────────────────────────────
+function PlanEditor({plan,plans,savePlans,onBack}){
+  const isNew=!plan||plan==="new";
+  const [name,setName]=useState(isNew?"":plan?.name||"");
+  const [exs,setExs]=useState(isNew?[]:plan?.exercises||[]);
+  const [browser,setBrowser]=useState(false);
+  const [openEx,setOpenEx]=useState(null);
+  const muscles=[...new Set(exs.map(e=>e.muscle))];
+  const toggle=ex=>{const ex_=exs.find(e=>e.name===ex.name&&e.muscle===ex.muscle);setExs(ex_?exs.filter(e=>!(e.name===ex.name&&e.muscle===ex.muscle)):[...exs,{id:genId(),name:ex.name,muscle:ex.muscle,sets:3,reps:10,weight:0}]);};
+  const updEx=(id,f,v)=>setExs(exs.map(e=>e.id===id?{...e,[f]:v}:e));
+  const remEx=id=>setExs(exs.filter(e=>e.id!==id));
+  const save=()=>{if(!name.trim()){alert("Give your plan a name.");return;}const p={id:isNew?genId():plan.id,name:name.trim(),exercises:exs};savePlans(isNew?[...plans,p]:plans.map(x=>x.id===plan.id?p:x));onBack();};
+  return <>
+    <div className="scr">
+      <Hdr title={isNew?"NEW PLAN":"EDIT PLAN"} left={<button className="iBtn" onClick={onBack} style={{fontSize:19,width:34}}>←</button>} right={<button className="btn btn-p btn-sm" onClick={save}>SAVE</button>}/>
+      <div className="scroll" style={{padding:"13px 13px 28px"}}>
+        <input className="inp" placeholder="Plan Name (e.g. Push Day)" value={name} onChange={e=>setName(e.target.value)} style={{marginBottom:12}}/>
+        <button className="btn btn-s" style={{marginBottom:14,borderStyle:"dashed",borderColor:C.accent,color:C.accent,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 13px",width:"100%"}} onClick={()=>setBrowser(true)}>
+          <span>+ BROWSE 150 EXERCISES</span>
+          <span style={{color:C.muted,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:400,fontSize:12}}>{exs.length} added</span>
+        </button>
+        {exs.length===0&&<div style={{textAlign:"center",padding:"28px 0",color:C.muted}}>
+          <div style={{fontSize:38,marginBottom:9}}>🏋️</div>
+          <div className="bebas" style={{fontSize:17,marginBottom:5}}>NO EXERCISES YET</div>
+          <div style={{fontSize:13}}>Browse 150 exercises across 10 muscle groups</div>
+        </div>}
+        {muscles.map(m=>{const mExs=exs.filter(e=>e.muscle===m);return <div key={m} className="card" style={{marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:9,paddingBottom:7,borderBottom:`1px solid ${C.border}`}}>
+            <div className="bebas" style={{fontSize:17,color:C.text}}>{MUSCLE_META[m]?.emoji} {m.toUpperCase()}</div>
+            <span className="bc" style={{fontSize:11,color:C.muted}}>{mExs.length}/5</span>
+          </div>
+          {mExs.map(ex=><div key={ex.id} style={{borderTop:`1px solid ${C.border}`,paddingTop:9,marginTop:5}}>
+            <div style={{display:"flex",alignItems:"center",marginBottom:openEx===ex.id?7:5}}>
+              <span className="bc" style={{flex:1,fontWeight:700,fontSize:14,color:C.text}}>{ex.name}</span>
+              <button className="iBtn" style={{fontSize:13}} onClick={()=>setOpenEx(openEx===ex.id?null:ex.id)}>{openEx===ex.id?"▲":"▼"}</button>
+              <button className="iBtn" style={{color:C.danger,fontSize:14}} onClick={()=>remEx(ex.id)}>✕</button>
+            </div>
+            {openEx===ex.id?<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,marginBottom:3}}>
+              {[["Sets","sets",1,0],["Reps","reps",1,1],["kg","weight",2.5,0]].map(([l,f,s,mn])=><div key={f}>
+                <div className="lbl" style={{marginBottom:3}}>{l}</div>
+                <Stepper value={ex[f]} onChange={v=>updEx(ex.id,f,v)} step={s} min={mn}/>
+              </div>)}
+            </div>:<div style={{display:"flex",gap:12}}>
+              {[["Sets",ex.sets],["Reps",ex.reps],["kg",ex.weight]].map(([l,v])=><span key={l} style={{color:C.muted,fontSize:12,fontFamily:"'Barlow Condensed',sans-serif"}}>{v} {l}</span>)}
+            </div>}
+          </div>)}
+        </div>;})}
+      </div>
+    </div>
+    {browser&&<ExBrowser exercises={exs} onToggle={toggle} onClose={()=>setBrowser(false)}/>}
+  </>;
+}
+
+// ─── WORKOUT TAB ──────────────────────────────────────────────────────────────
+function WorkoutTab({plans,savePlans,history,startWorkout,activeWorkout,goActive}){
+  const [editing,setEditing]=useState(null);
+  if(editing!==null) return <PlanEditor plan={editing} plans={plans} savePlans={savePlans} onBack={()=>setEditing(null)}/>;
+  const del=(id,n)=>{if(window.confirm(`Delete "${n}"?`))savePlans(plans.filter(p=>p.id!==id));};
+  return <div className="scr">
+    <Hdr title="WORKOUT" right={<button className="btn btn-p btn-sm" onClick={()=>setEditing("new")}>+ NEW</button>}/>
+    <div className="scroll" style={{padding:"13px 13px 20px"}}>
+      {activeWorkout&&<div style={{background:C.accent,padding:"13px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={goActive}>
+        <div>
+          <div className="bc" style={{fontSize:10,color:"rgba(0,0,0,.6)",letterSpacing:2,fontWeight:700}}>ACTIVE WORKOUT</div>
+          <div className="bebas" style={{fontSize:21,color:"#000",letterSpacing:.5}}>{activeWorkout.planName}</div>
+        </div>
+        <div style={{background:"#000",padding:"7px 13px"}}>
+          <span className="bc" style={{fontWeight:700,fontSize:12,color:C.accent,letterSpacing:1.5}}>RESUME →</span>
+        </div>
+      </div>}
+      <button className="btn btn-s" style={{marginBottom:12,borderStyle:"dashed",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 14px",width:"100%"}}
+        onClick={()=>{startWorkout({id:"empty",name:"Empty Workout",exercises:[]});goActive();}}>
+        <span>⚡ START EMPTY WORKOUT</span>
+        <span style={{color:C.muted,fontFamily:"'Barlow Condensed',sans-serif",fontWeight:400,fontSize:12}}>log as you go</span>
+      </button>
+      {plans.length===0?<div style={{textAlign:"center",padding:"36px 0"}}>
+        <div style={{fontSize:42,marginBottom:11}}>📋</div>
+        <div className="bebas" style={{fontSize:19,color:C.muted,marginBottom:7}}>NO PLANS YET</div>
+        <div style={{color:C.muted,fontSize:13,marginBottom:18}}>Create your first routine</div>
+        <button className="btn btn-p" style={{display:"inline-block",width:"auto",padding:"11px 24px"}} onClick={()=>setEditing("new")}>CREATE PLAN</button>
+      </div>:plans.map(p=>{
+        const muscles=[...new Set(p.exercises?.map(e=>e.muscle)||[])];
+        const last=history.filter(s=>s.planName===p.name)[0];
+        return <div key={p.id} className="card">
+          <div style={{display:"flex",alignItems:"flex-start",marginBottom:9}}>
+            <div style={{flex:1}}>
+              <div className="bebas" style={{fontSize:21,color:C.text,letterSpacing:.5}}>{p.name}</div>
+              <div style={{color:C.muted,fontSize:12,fontFamily:"'Barlow',sans-serif"}}>
+                {p.exercises?.length||0} exercises{last&&<span> · last {new Date(last.date).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:2,flexShrink:0}}>
+              <button className="iBtn" onClick={()=>setEditing(p)}>✏️</button>
+              <button className="iBtn" style={{color:C.danger}} onClick={()=>del(p.id,p.name)}>🗑️</button>
+            </div>
+          </div>
+          <div style={{marginBottom:11}}>{muscles.map(m=><span key={m} className="tag">{MUSCLE_META[m]?.emoji} {m}</span>)}</div>
+          <button className="btn btn-p" onClick={()=>{startWorkout(p);goActive();}}>START WORKOUT</button>
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+// ─── ACTIVE WORKOUT ───────────────────────────────────────────────────────────
+function ActiveWorkout({workout,setWorkout,onFinish,onDiscard}){
+  const [rk,setRk]=useState(0),[showRest,setShowRest]=useState(false),[addModal,setAddModal]=useState(false);
+  const elapsed=useElapsed(!!workout);
+  if(!workout) return <div style={{display:"flex",flex:1,flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10}}>
+    <div style={{fontSize:44}}>⚡</div>
+    <div className="bebas" style={{fontSize:19,color:C.muted}}>NO ACTIVE WORKOUT</div>
+    <div className="bc" style={{color:C.muted,fontSize:13}}>Go to Workout tab to begin</div>
+  </div>;
+  const total=workout.exercises.reduce((s,e)=>s+e.sets.length,0);
+  const done=workout.exercises.reduce((s,e)=>s+e.sets.filter(st=>st.done).length,0);
+  const trigger=()=>{setRk(k=>k+1);setShowRest(true);};
+  const updSet=(ei,si,f,v)=>{
+    const was=workout.exercises[ei]?.sets[si]?.done;
+    if(f==="done"&&v&&!was) trigger();
+    setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map((s,j)=>j!==si?s:{...s,[f]:f==="done"?v:Number(v)||0})})}));
+  };
+  const markAll=ei=>{const all=workout.exercises[ei].sets.every(s=>s.done);if(!all)trigger();setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:ex.sets.map(s=>({...s,done:!all})),expanded:all})}));};
+  const toggleExp=ei=>setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>i!==ei?ex:{...ex,expanded:!ex.expanded})}));
+  const addSet=ei=>setWorkout(w=>({...w,exercises:w.exercises.map((ex,i)=>i!==ei?ex:{...ex,sets:[...ex.sets,{reps:ex.sets.at(-1)?.reps||10,weight:ex.sets.at(-1)?.weight||0,done:false}]})}));
+  const addExercise=ex=>setWorkout(w=>({...w,exercises:[...w.exercises,{...ex,id:genId(),instanceId:genId(),expanded:true,sets:Array.from({length:3},()=>({reps:10,weight:0,done:false}))}]}));
+  const finish=()=>{if(window.confirm(`Finish? ${done}/${total} sets · ${formatTime(elapsed)}`))onFinish(elapsed);};
+  const discard=()=>{if(window.confirm("Discard all progress?"))onDiscard();};
+  return <div className="scr">
+    <div style={{padding:"9px 13px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+      <div>
+        <div className="bebas" style={{fontSize:19,color:C.text,lineHeight:1.1,letterSpacing:.5}}>{workout.planName}</div>
+        <div className="bc" style={{fontSize:11,color:C.muted}}>{done}/{total} sets</div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:7}}>
+        <div className="wtimer">{formatTime(elapsed)}</div>
+        <button className="btn btn-d btn-sm" style={{padding:"5px 9px"}} onClick={discard}>✕</button>
+      </div>
+    </div>
+    <div className="pgbar"><div className="pgfill" style={{width:`${total>0?done/total*100:0}%`}}/></div>
+    {showRest&&<RestTimer rk={rk} onSkip={()=>setShowRest(false)}/>}
+    <div className="scroll" style={{padding:"9px 11px"}}>
+      {workout.exercises.map((ex,ei)=>{
+        const exDone=ex.sets.every(s=>s.done);
+        return <div key={ex.instanceId||ex.id} className={`aex${exDone?" done":""}`}>
+          <div className="aex-hdr" onClick={()=>toggleExp(ei)}>
+            <div style={{flex:1}}>
+              <div className="aex-name">{ex.name}</div>
+              <div style={{display:"flex",alignItems:"center",gap:7,marginTop:3}}>
+                <span className="tag" style={{margin:0}}>{MUSCLE_META[ex.muscle]?.emoji} {ex.muscle}</span>
+                <span className="bc" style={{fontSize:10,color:C.muted}}>{ex.sets.filter(s=>s.done).length}/{ex.sets.length}</span>
+              </div>
+            </div>
+            <button className={`circle${exDone?" done":""}`} onClick={e=>{e.stopPropagation();markAll(ei);}}>
+              {exDone&&<span style={{color:"#000",fontWeight:700,fontSize:12}}>✓</span>}
+            </button>
+          </div>
+          {ex.expanded&&<div style={{padding:"7px 11px"}}>
+            <div style={{display:"grid",gridTemplateColumns:"20px 1fr 1fr 32px",gap:5,marginBottom:3}}>
+              <span/><div className="bc" style={{fontSize:9,color:C.muted,textAlign:"center",fontWeight:700,letterSpacing:1.5}}>REPS</div>
+              <div className="bc" style={{fontSize:9,color:C.muted,textAlign:"center",fontWeight:700,letterSpacing:1.5}}>KG</div><span/>
+            </div>
+            {ex.sets.map((set,si)=><div key={si} style={{display:"grid",gridTemplateColumns:"20px 1fr 1fr 32px",gap:5,alignItems:"center",padding:"4px 0",borderBottom:`1px solid ${C.border}`,opacity:set.done?.6:1}}>
+              <span className="bc" style={{fontSize:10,color:C.muted,textAlign:"center",fontWeight:700}}>S{si+1}</span>
+              <Stepper value={set.reps} onChange={v=>updSet(ei,si,"reps",v)} min={1}/>
+              <Stepper value={set.weight} onChange={v=>updSet(ei,si,"weight",v)} step={2.5}/>
+              <button className={`circle${set.done?" done":""}`} style={{width:26,height:26}} onClick={()=>updSet(ei,si,"done",!set.done)}>
+                {set.done&&<span style={{color:"#000",fontWeight:700,fontSize:11}}>✓</span>}
+              </button>
+            </div>)}
+            <button className="btn btn-s" style={{marginTop:7,fontSize:11,letterSpacing:1,padding:"5px 0"}} onClick={()=>addSet(ei)}>+ ADD SET</button>
+          </div>}
+        </div>;
+      })}
+      <button className="btn btn-s" style={{borderStyle:"dashed",marginBottom:7}} onClick={()=>setAddModal(true)}>+ ADD EXERCISE</button>
+      <button className="btn btn-p" style={{marginBottom:14}} onClick={finish}>FINISH WORKOUT · {formatTime(elapsed)}</button>
+    </div>
+    {addModal&&<div className="overlay"><div className="modal">
+      <div className="bebas" style={{fontSize:22,color:C.accent,marginBottom:12,letterSpacing:1}}>ADD EXERCISE</div>
+      <div style={{maxHeight:310,overflowY:"auto"}}>
+        {MUSCLE_GROUPS.map(m=><div key={m}>
+          <div className="lbl" style={{marginTop:9,marginBottom:5}}>{MUSCLE_META[m]?.emoji} {m}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+            {EXERCISES[m].map(n=><button key={n} className="chip" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>{addExercise({name:n,muscle:m});setAddModal(false);}}>{n}</button>)}
+          </div>
+        </div>)}
+      </div>
+      <button className="btn btn-s" style={{marginTop:12}} onClick={()=>setAddModal(false)}>CANCEL</button>
+    </div></div>}
+  </div>;
+}
+
+// ─── PROFILE ──────────────────────────────────────────────────────────────────
+function ProfileScreen({user,onUpdate,onLogout,avatar,onAvatar,history}){
+  const [editing,setEditing]=useState(false);
+  const [f,setF]=useState({name:user?.name||"",age:user?.age||"",weight:user?.weight||"",height:user?.height||"",gender:user?.gender||"male",goal:user?.goal||"Build Muscle"});
+  const [cal,setCal]=useState({tdee:"",goal:"maintain"});
+  const up=(k,v)=>setF(p=>({...p,[k]:v}));
+
+  // Body calcs
+  const w=parseFloat(f.weight)||0,h=parseFloat(f.height)||0,age=parseInt(f.age)||0;
+  const bmi=h>0&&w>0?+(w/((h/100)**2)).toFixed(1):null;
+  const bmr=w&&h&&age?(f.gender==="male"?+(88.36+13.4*w+4.8*h-5.7*age).toFixed(0):+(447.6+9.2*w+3.1*h-4.3*age).toFixed(0)):null;
+  const bmiInfo=bmi?(bmi<18.5?{l:"Underweight",c:"#3b82f6"}:bmi<25?{l:"Normal",c:C.success}:bmi<30?{l:"Overweight",c:"#f97316"}:{l:"Obese",c:C.danger}):null;
+  const bmiPct=bmi?Math.min(100,Math.max(0,(bmi-10)/35*100)):null;
+
+  const tdeeNum=parseFloat(cal.tdee)||0;
+  const calTarget=cal.goal==="surplus"?tdeeNum+500:cal.goal==="deficit"?tdeeNum-500:tdeeNum;
+  const calColor=cal.goal==="surplus"?C.success:cal.goal==="deficit"?C.accent2:C.accent;
+
+  const totalWorkouts=history.length;
+  const totalSets=history.reduce((s,h)=>s+h.exercises.reduce((a,e)=>a+e.sets.length,0),0);
+  const totalVol=history.reduce((s,h)=>s+h.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>b+st.reps*st.weight,0),0),0);
+
+  const handleImg=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>onAvatar(ev.target.result);r.readAsDataURL(file);};
+  const save=()=>{const u={...user,...f};const users=store.get("users")||{};if(users[user.email]){users[user.email]={...users[user.email],...f};store.set("users",users);}onUpdate(u);setEditing(false);};
+  const goals=["Build Muscle","Lose Fat","Strength","Endurance"];
+
+  return <div className="scr">
+    <Hdr title="PROFILE" right={<button className="iBtn" style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:11,letterSpacing:1,color:C.danger,padding:"4px 8px",border:`1px solid ${C.border}`}} onClick={onLogout}>LOG OUT</button>}/>
+    <div className="scroll" style={{padding:"0 0 28px"}}>
+
+      {/* Avatar + name card */}
+      <div style={{padding:"16px 15px 14px",borderBottom:`1px solid ${C.border}`,background:C.surface,display:"flex",alignItems:"center",gap:13}}>
+        <label className="avatar" htmlFor="av-inp" title="Tap to change photo">
+          {avatar?<img src={avatar} alt="profile"/>
+            :<span className="bebas" style={{fontSize:26,color:C.accent}}>{(user?.name||"U")[0].toUpperCase()}</span>}
+          <div className="avatar-ov"><span style={{fontSize:18}}>📷</span></div>
+        </label>
+        <input id="av-inp" type="file" accept="image/*" style={{display:"none"}} onChange={handleImg}/>
+        <div style={{flex:1}}>
+          <div className="bebas" style={{fontSize:24,color:C.text,letterSpacing:.5,lineHeight:1}}>{user?.name||"Athlete"}</div>
+          <div className="bc" style={{fontSize:12,color:C.accent,marginTop:2}}>{user?.goal||"No goal set"}</div>
+          <div className="bc" style={{fontSize:11,color:C.muted,marginTop:2}}>{user?.email}</div>
+        </div>
+        <button className="iBtn" onClick={()=>setEditing(e=>!e)} style={{fontSize:17}}>{editing?"✕":"✏️"}</button>
+      </div>
+
+      {/* Edit form */}
+      {editing&&<div style={{padding:"13px 13px 0",borderBottom:`1px solid ${C.border}`,background:C.surface2}}>
+        <div className="lbl" style={{marginBottom:8}}>EDIT PROFILE</div>
+        <input className="inp" placeholder="Name" value={f.name} onChange={e=>up("name",e.target.value)} style={{marginBottom:7}}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
+          <input className="inp" placeholder="Age" type="number" value={f.age} onChange={e=>up("age",e.target.value)}/>
+          <select className="inp" value={f.gender} onChange={e=>up("gender",e.target.value)}>
+            <option value="male">Male</option><option value="female">Female</option>
+          </select>
+        </div>
+        <div className="lbl" style={{marginBottom:4}}>GOAL</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:11}}>
+          {goals.map(g=><button key={g} className={`chip${f.goal===g?" on":""}`} style={{fontSize:11}} onClick={()=>up("goal",g)}>{g}</button>)}
+        </div>
+        <button className="btn btn-p" style={{marginBottom:13}} onClick={save}>SAVE CHANGES</button>
+      </div>}
+
+      <div style={{padding:"14px 13px 0"}}>
+
+        {/* Body measurements */}
+        <div className="lbl" style={{marginBottom:9}}>BODY MEASUREMENTS</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:13}}>
+          {[["Weight","weight","kg"],["Height","height","cm"]].map(([l,k,u])=>(
+            <div key={k} style={{background:C.surface2,border:`1px solid ${C.border}`,padding:"11px 12px"}}>
+              <div className="lbl" style={{marginBottom:5}}>{l}</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+                <input type="number" className="inp" style={{flex:1,fontSize:26,fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1,padding:"4px 6px",borderColor:"transparent",background:"transparent",color:C.accent}}
+                  value={f[k]} placeholder="—" onChange={e=>up(k,e.target.value)} onBlur={save}/>
+                <span className="bc" style={{fontSize:12,color:C.muted}}>{u}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* BMI */}
+        {bmi&&<div className="card" style={{marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
+            <div className="lbl">BMI</div>
+            <span className="bc" style={{fontSize:12,color:bmiInfo?.c,fontWeight:700}}>{bmiInfo?.l}</span>
+          </div>
+          <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:9}}>
+            <span className="bebas" style={{fontSize:40,color:bmiInfo?.c,lineHeight:1}}>{bmi}</span>
+            <span className="bc" style={{fontSize:13,color:C.muted}}>kg/m²</span>
+          </div>
+          <div className="bmi-bar"><div className="bmi-needle" style={{left:`${bmiPct}%`}}/></div>
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+            {["Under","Normal","Over","Obese"].map(l=><span key={l} className="bc" style={{fontSize:9,color:C.muted}}>{l}</span>)}
+          </div>
+        </div>}
+
+        {/* BMR */}
+        {bmr&&<div className="card" style={{marginBottom:12}}>
+          <div className="lbl" style={{marginBottom:5}}>BASAL METABOLIC RATE (BMR)</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:9}}>
+            <span className="bebas" style={{fontSize:40,color:C.accent,lineHeight:1}}>{bmr}</span>
+            <span className="bc" style={{fontSize:13,color:C.muted}}>kcal / day at rest</span>
+          </div>
+          <div className="lbl" style={{marginBottom:6,fontSize:9}}>TDEE BY ACTIVITY LEVEL</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
+            {[["Sedentary",bmr*1.2,"×1.2"],["Active",bmr*1.55,"×1.55"],["Very Active",bmr*1.725,"×1.73"]].map(([l,v,m])=>(
+              <div key={l} style={{background:C.surface2,border:`1px solid ${C.border}`,padding:"8px",textAlign:"center"}}>
+                <div className="bebas" style={{fontSize:17,color:C.text,lineHeight:1}}>{Math.round(v)}</div>
+                <div className="bc" style={{fontSize:9,color:C.muted,marginTop:2}}>{l}</div>
+                <div className="bc" style={{fontSize:9,color:C.accent}}>{m}</div>
+              </div>
+            ))}
+          </div>
+        </div>}
+
+        {/* Calorie Calculator */}
+        <div className="card" style={{marginBottom:12}}>
+          <div className="lbl" style={{marginBottom:9}}>CALORIE CALCULATOR</div>
+          <div className="lbl" style={{marginBottom:4,fontSize:9}}>YOUR TDEE (KCAL/DAY)</div>
+          <input className="inp" type="number" placeholder="e.g. 2500  —  enter your total daily energy expenditure" style={{marginBottom:9,fontSize:13}} value={cal.tdee} onChange={e=>setCal(p=>({...p,tdee:e.target.value}))}/>
+          <div className="lbl" style={{marginBottom:5,fontSize:9}}>GOAL</div>
+          <div style={{display:"flex",gap:5,marginBottom:9}}>
+            {[["deficit","🔥 Cut"],["maintain","⚖️ Maintain"],["surplus","💪 Bulk"]].map(([v,l])=>(
+              <button key={v} className={`chip${cal.goal===v?" on":""}`} style={{flex:1,textAlign:"center",fontSize:11,padding:"6px 4px"}} onClick={()=>setCal(p=>({...p,goal:v}))}>{l}</button>
+            ))}
+          </div>
+          {tdeeNum>0&&<div style={{background:C.surface2,border:`1px solid ${calColor}`,padding:"13px",textAlign:"center"}}>
+            <div className="bc" style={{fontSize:10,color:C.muted,letterSpacing:2,marginBottom:4}}>
+              {cal.goal==="surplus"?"BULKING TARGET":cal.goal==="deficit"?"CUTTING TARGET":"MAINTENANCE"}
+            </div>
+            <div className="bebas" style={{fontSize:46,color:calColor,lineHeight:1}}>{Math.round(calTarget)}</div>
+            <div className="bc" style={{fontSize:12,color:C.muted,marginTop:3}}>kcal / day</div>
+            {cal.goal!=="maintain"&&<div className="bc" style={{fontSize:11,color:C.muted,marginTop:6}}>
+              {cal.goal==="surplus"?"+500 kcal · ≈ 0.5 kg/week gain":"-500 kcal · ≈ 0.5 kg/week loss"}
+            </div>}
+          </div>}
+        </div>
+
+        {/* Stats */}
+        <div className="lbl" style={{marginBottom:9}}>WORKOUT STATISTICS</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:22}}>
+          {[
+            ["SESSIONS",totalWorkouts,""],
+            ["TOTAL SETS",totalSets,""],
+            ["TOTAL VOLUME",totalVol>9999?`${(totalVol/1000).toFixed(1)}k`:totalVol,"kg"],
+            ["AVG SETS/SESSION",totalWorkouts>0?Math.round(totalSets/totalWorkouts):0,""],
+          ].map(([l,v,u])=>(
+            <div key={l} className="stat-card">
+              <div className="stat-val">{v}{u&&<span style={{fontSize:14}}> {u}</span>}</div>
+              <div className="stat-sub">{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>;
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────────────────────
+function App(){
+  const [user,setUser]=useState(()=>store.get("currentUser"));
+  const [plans,setPlans]=useState(()=>store.get("plans")||[]);
+  const [history,setHistory]=useState(()=>store.get("history")||[]);
+  const [workout,setWorkout]=useState(null);
+  const [tab,setTab]=useState("home");
+  const [avatar,setAvatar]=useState(()=>store.get("avatar"));
+
+  const savePlans=p=>{setPlans(p);store.set("plans",p);};
+  const saveHistory=h=>{setHistory(h);store.set("history",h);};
+  const login=u=>{setUser(u);store.set("currentUser",u);};
+  const logout=()=>{setUser(null);store.set("currentUser",null);};
+  const updateUser=u=>{setUser(u);store.set("currentUser",u);};
+  const setAvt=a=>{setAvatar(a);store.set("avatar",a);};
+
+  const startWorkout=plan=>{
+    setWorkout({planId:plan.id,planName:plan.name,
+      exercises:plan.exercises.map(ex=>({...ex,instanceId:genId(),expanded:true,
+        sets:Array.from({length:ex.sets||1},()=>({reps:ex.reps||10,weight:ex.weight||0,done:false}))}))});
+  };
+  const finishWorkout=elapsed=>{
+    if(!workout)return;
+    const s={id:genId(),date:new Date().toISOString(),planName:workout.planName,duration:elapsed,
+      exercises:workout.exercises.map(ex=>({name:ex.name,muscle:ex.muscle||"Other",sets:ex.sets.filter(s=>s.done)})).filter(ex=>ex.sets.length>0)};
+    // Use functional update to avoid stale closure on history
+    setHistory(prev=>{const next=[s,...prev];store.set("history",next);return next;});
+    setWorkout(null);setTab("home");
+  };
+  const discardWorkout=()=>{setWorkout(null);setTab("workout");};
+
+  const TABS=[{id:"home",icon:"🏠",label:"HOME"},{id:"workout",icon:"🏋️",label:"WORKOUT"},{id:"profile",icon:"👤",label:"PROFILE"}];
+
+  return <>
+    <style>{CSS}</style>
+    <div style={{background:"#07070e",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div className="phone">
+        <div className="notch"><div className="n-cam"/><div className="n-spk"/><div className="n-cam"/></div>
+        <div className="screen">
+          {!user
+            ?<LoginScreen onLogin={login}/>
+            :<div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+              <div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",position:"relative"}}>
+                {tab==="home"&&<HomeScreen history={history} avatar={avatar} userName={user?.name}/>}
+                {tab==="workout"&&<WorkoutTab plans={plans} savePlans={savePlans} history={history} startWorkout={startWorkout} activeWorkout={workout} goActive={()=>setTab("active")}/>}
+                {tab==="active"&&<ActiveWorkout workout={workout} setWorkout={setWorkout} onFinish={finishWorkout} onDiscard={discardWorkout}/>}
+                {tab==="profile"&&<ProfileScreen user={user} onUpdate={updateUser} onLogout={logout} avatar={avatar} onAvatar={setAvt} history={history}/>}
+              </div>
+              <div className="tabbar">
+                {TABS.map(t=>{
+                  const on=tab===t.id||(t.id==="workout"&&tab==="active");
+                  return <button key={t.id} className={`tabBtn${on?" on":""}`} onClick={()=>setTab(t.id)}>
+                    <span className="tabIcon">{t.icon}</span>
+                    <span className="tabLbl">{t.label}</span>
+                    {t.id==="workout"&&workout&&tab!=="active"&&<span style={{width:6,height:6,borderRadius:"50%",background:C.accent,display:"block",margin:"0 auto"}}/>}
+                  </button>;
+                })}
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </>;
+}
+
+const { useState, useEffect, useRef, useMemo } = React;
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
